@@ -20,29 +20,26 @@ struct Point2D {
     constexpr Point2D() : x(0), y(0) {}
     constexpr Point2D(double x, double y) : x(x), y(y) {}
 
-    // Comparison
-    bool operator<(const Point2D &other) { return x < other.x && y < other.y; }
-    bool operator==(const Point2D &other) {
+    [[nodiscard]] constexpr bool operator<(const Point2D &other) const noexcept { return x < other.x && y < other.y; }
+    [[nodiscard]] constexpr bool operator==(const Point2D &other) const noexcept {
         return x == other.x && y == other.y;
     }
 
-    // Binary math operators
-    Point2D operator+(const Point2D &other) const{
+    [[nodiscard]] constexpr Point2D operator+(const Point2D &other) const noexcept {
         return {x + other.x, y + other.y};
     }
-    Point2D operator-(const Point2D &other) const{
+    [[nodiscard]] constexpr Point2D operator-(const Point2D &other) const noexcept {
         return {x - other.x, y - other.y};
     }
-    Point2D operator*(double value) { return {x * value, y * value}; }
-    Point2D operator/(double value) { return {x / value, y / value}; }
+    [[nodiscard]] constexpr Point2D operator*(double value) const noexcept { return {x * value, y * value}; }
+    [[nodiscard]] constexpr Point2D operator/(double value) const noexcept { return {x / value, y / value}; }
 
-    // Binary geometry operations
-    double Dot(const Point2D &other) { return x * other.x + y * other.y; }
-    double Cross(const Point2D &other) { return x * other.y - y * other.x; }
-    double Length() { return std::sqrt(x * x + y * y); }
-    double DistanceTo(const Point2D &other) const { return (*this - other).Length(); }
+    [[nodiscard]] constexpr double Dot(const Point2D &other) const noexcept { return x * other.x + y * other.y; }
+    [[nodiscard]] constexpr double Cross(const Point2D &other) const noexcept { return x * other.y - y * other.x; }
+    [[nodiscard]] constexpr double Length() const noexcept { return std::sqrt(x * x + y * y); }
+    [[nodiscard]] constexpr double DistanceTo(const Point2D &other) const noexcept { return (*this - other).Length(); }
 
-    Point2D Normalize() {
+    [[nodiscard]] constexpr Point2D Normalize() const noexcept {
         const double len = Length();
         return len > 0 ? Point2D{x / len, y / len} : Point2D{0, 0};
     }
@@ -58,19 +55,19 @@ struct Lines2DDyn {
     std::vector<double> x;
     std::vector<double> y;
 
-    void Reserve(size_t n) {
+    constexpr void Reserve(size_t n) {
         x.reserve(n);
         y.reserve(n);
     }
-    void PushBack(Point2D p) {
+    constexpr void PushBack(Point2D p) {
         x.push_back(p.x);
         y.push_back(p.y);
     }
-    void PushBack(double px, double py) {
+    constexpr void PushBack(double px, double py) {
         x.push_back(px);
         y.push_back(py);
     }
-    Point2D Front() { return {x.front(), y.front()}; }
+    [[nodiscard]] constexpr Point2D Front() const noexcept { return {x.front(), y.front()}; }
 };
 
 struct BoundingBox {
@@ -290,17 +287,35 @@ struct std::formatter<std::vector<geometry::Point2D>> {
 
     constexpr auto parse(std::format_parse_context &ctx) {
         auto it = ctx.begin();
+        auto end = ctx.end();
 
-        /* ваш код здесь */
+        if (it != end && *it != '}') {
+            std::string_view spec{it, end};
+            if (spec.starts_with("new_line")) {
+                use_new_line = true;
+                return it + std::string_view("new_line").size();
+            }
+        }
 
         return it;
     }
 
     template <typename FormatContext>
-    auto format(const std::vector<geometry::Point2D> &v, FormatContext &ctx) {
-
-        /* ваш код здесь */
-        return ctx.out();
+    auto format(const std::vector<geometry::Point2D> &v, FormatContext &ctx) const {
+        auto out = ctx.out();
+        if (use_new_line) {
+            for (const auto &p : v) {
+                out = std::format_to(out, "\t{}\n", p);
+            }
+        } else {
+            for (size_t i = 0; i < v.size(); ++i) {
+                if (i > 0) {
+                    out = std::format_to(out, ", ");
+                }
+                out = std::format_to(out, "{}", v[i]);
+            }
+        }
+        return out;
     }
 };
 

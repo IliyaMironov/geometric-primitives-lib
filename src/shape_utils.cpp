@@ -1,4 +1,5 @@
 #include "shape_utils.hpp"
+#include "queries.hpp"
 #include <functional>
 
 namespace geometry::utils {
@@ -78,7 +79,13 @@ std::optional<int> RequireIntegerAtLeast(double d, int min_value) {
         return Circle{{v[0], v[1]}, v[2]};
 */
 std::optional<Shape> MakeCircle(const std::vector<double>& v) {
-    //Ваш код здесь
+    return RequireSize(v, 3)
+        .and_then([](const std::vector<double>& vals) -> std::optional<Shape> {
+            return RequirePositive(vals[2])
+                .transform([&](double r) -> Shape {
+                    return Circle{{vals[0], vals[1]}, r};
+                });
+        });
 }
 
 /**
@@ -88,7 +95,10 @@ std::optional<Shape> MakeCircle(const std::vector<double>& v) {
         return Line{{v[0], v[1]}, {v[2], v[3]}};
 */
 std::optional<Shape> MakeLine(const std::vector<double>& v) {
-    //Ваш код здесь
+    return RequireSize(v, 4)
+        .transform([](const std::vector<double>& vals) -> Shape {
+            return Line{{vals[0], vals[1]}, {vals[2], vals[3]}};
+        });
 }
 
 /**
@@ -98,7 +108,10 @@ std::optional<Shape> MakeLine(const std::vector<double>& v) {
         return Triangle{{v[0], v[1]}, {v[2], v[3]}, {v[4], v[5]}};
 */
 std::optional<Shape> MakeTriangle(const std::vector<double>& v) {
-    //Ваш код здесь
+    return RequireSize(v, 6)
+        .transform([](const std::vector<double>& vals) -> Shape {
+            return Triangle{{vals[0], vals[1]}, {vals[2], vals[3]}, {vals[4], vals[5]}};
+        });
 }
 
 /**
@@ -109,7 +122,16 @@ std::optional<Shape> MakeTriangle(const std::vector<double>& v) {
         return Rectangle{{v[0], v[1]}, v[2], v[3]};
 */
 std::optional<Shape> MakeRectangle(const std::vector<double>& v) {
-    //Ваш код здесь
+    return RequireSize(v, 4)
+        .and_then([](const std::vector<double>& vals) -> std::optional<Shape> {
+            return RequirePositive(vals[2])
+                .and_then([&](double w) -> std::optional<Shape> {
+                    return RequirePositive(vals[3])
+                        .transform([&](double h) -> Shape {
+                            return Rectangle{{vals[0], vals[1]}, w, h};
+                        });
+                });
+        });
 }
 
 /**
@@ -124,7 +146,16 @@ std::optional<Shape> MakeRectangle(const std::vector<double>& v) {
         return RegularPolygon{{v[0], v[1]}, v[2], sides};
 */
 std::optional<Shape> MakePolygon(const std::vector<double>& v) {
-    //Ваш код здесь
+    return RequireSize(v, 4)
+        .and_then([](const std::vector<double>& vals) -> std::optional<Shape> {
+            return RequirePositive(vals[2])
+                .and_then([&](double r) -> std::optional<Shape> {
+                    return RequireIntegerAtLeast(vals[3], 3)
+                        .transform([&](int sides) -> Shape {
+                            return RegularPolygon{{vals[0], vals[1]}, r, sides};
+                        });
+                });
+        });
 }
 
 // Парсинг одной фигуры
@@ -189,23 +220,27 @@ std::vector<Shape> ParseShapes(std::string_view input) {
 std::vector<std::pair<Shape, Shape>> FindAllCollisions(std::span<const Shape> shapes) {
     std::vector<std::pair<Shape, Shape>> collisions;
 
-    /*
-     * Используйте библиотеку ranges, чтобы найти все коллизии между фигурами методом BoundingBoxesOverlap
-     *
-     * Также используйте наиболее эффективный метод добавления объектов в collisions
-     */
+    auto indices = std::views::iota(0u, shapes.size());
+    for (auto i : indices) {
+        for (auto j : std::views::iota(i + 1, shapes.size())) {
+            if (queries::BoundingBoxesOverlap(shapes[i], shapes[j])) {
+                collisions.emplace_back(shapes[i], shapes[j]);
+            }
+        }
+    }
 
     return collisions;
 }
 
 std::optional<size_t> FindHighestShape(std::span<const Shape> shapes) {
+    if (shapes.empty()) return std::nullopt;
 
-    /*
-     * Используйте библиотеку ranges, чтобы найти самую высокую фигуру
-     *
-     * Важно: использование ручной итерации по фигурам не разрешается
-     */
+    auto heights = std::views::iota(0u, shapes.size())
+        | std::views::transform([&](size_t i) {
+            return std::pair{i, queries::GetHeight(shapes[i])};
+        });
 
-    return std::nullopt;
+    auto max_it = std::ranges::max_element(heights, {}, &std::pair<size_t, double>::second);
+    return max_it->first;
 }
 }
