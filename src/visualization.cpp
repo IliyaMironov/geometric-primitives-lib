@@ -2,7 +2,6 @@
 #include "geometry.hpp"
 
 #include <matplot/matplot.h>
-#include <print>
 
 namespace geometry::visualization {
 
@@ -49,9 +48,16 @@ void Draw(std::span<geometry::Shape> shapes) {
          * 
          */
 
-        //ваш код тут
+        std::visit(Multilambda{
+            [](const Line &s)           { plot(s.Lines().x, s.Lines().y)->line_width(2).color("yellow"); },
+            [](const Triangle &s)       { plot(s.Lines().x, s.Lines().y)->line_width(2).color("blue"); },
+            [](const Rectangle &s)      { plot(s.Lines().x, s.Lines().y)->line_width(2).color("green"); },
+            [](const RegularPolygon &s) { auto l = s.Lines(); plot(l.x, l.y)->line_width(2).color("magenta"); },
+            [](const Circle &s)         { auto l = s.Lines(); plot(l.x, l.y)->line_width(2).color("red"); },
+            [](const Polygon &s)        { auto l = s.Lines(); plot(l.x, l.y)->line_width(2).color("cyan"); },
+        }, shape);
         // Add shape number
-        const auto center = shape.visit([](auto &&s) { return s.Center(); });
+        const auto center = std::visit([](auto &&s) { return s.Center(); }, shape);
         auto t = text(center.x, center.y, std::to_string(index));
         t->font_size(14);
         t->color("black");

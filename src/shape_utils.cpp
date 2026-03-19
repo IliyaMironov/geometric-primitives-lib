@@ -241,6 +241,6 @@ std::optional<size_t> FindHighestShape(std::span<const Shape> shapes) {
         });
 
     auto max_it = std::ranges::max_element(heights, {}, &std::pair<size_t, double>::second);
-    return max_it->first;
+    return (*max_it).first;
 }
 }
