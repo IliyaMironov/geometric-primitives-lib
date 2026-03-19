@@ -1,10 +1,11 @@
 #pragma once
 #include "geometry.hpp"
 #include <algorithm>
+#include <expected>
 #include <format>
 #include <set>
+#include <string>
 #include <vector>
-#include <stdexcept>
 
 namespace geometry::triangulation {
 
@@ -86,10 +87,9 @@ struct Edge {
     }
 };
 
-//Ваш код здесь
-inline std::vector<DelaunayTriangle> DelaunayTriangulation(std::span<const Point2D> points) {
+inline std::expected<std::vector<DelaunayTriangle>, std::string> DelaunayTriangulation(std::span<const Point2D> points) noexcept {
    if (points.size() < 3) {
-        throw std::logic_error("At least three points are required for triangulation.");
+        return std::unexpected("At least three points are required for triangulation.");
     }
 
     auto [minX, maxX] =
